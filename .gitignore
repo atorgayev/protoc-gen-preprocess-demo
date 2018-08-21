@@ -1,0 +1,2 @@
+protoc-gen-preprocess
+out/demo.preprocess.pb.go
