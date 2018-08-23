@@ -37,16 +37,16 @@ func (p *preprocessor) Init(g *generator.Generator) {
 func (p *preprocessor) Generate(file *generator.FileDescriptor) {
 	for _, message := range file.Messages() {
 		ccTypeName := generator.CamelCaseSlice(message.TypeName())
-		p.P(`func (this *`, ccTypeName, `) Preprocessor() string {`)
+		p.P(`func (this *`, ccTypeName, `) Preprocess() string {`)
 		p.In()
 		p.P(`if this == nil {`)
 		p.In()
 		p.P(`return "nil"`)
 		p.Out()
 		p.P(`}`)
-		for range message.Field {
-			p.P(`//`)
-		}
+		/*for _, field := range message.Field {
+			p.P(fmt.Sprintf(field.String()))
+		}*/
 		p.P(`}`)
 	}
 }
