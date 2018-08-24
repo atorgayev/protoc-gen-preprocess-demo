@@ -1,7 +1,8 @@
 package plugin
 
 import (
-	"fmt"
+	"bytes"
+	"text/template"
 
 	prep "github.com/atorgayev/protoc-gen-preprocess/options"
 	"github.com/gogo/protobuf/proto"
@@ -9,13 +10,19 @@ import (
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
 )
 
+type rule map[string]map[string][]string
+
 type preprocessor struct {
 	*generator.Generator
 	generator.PluginImports
+	rules       rule
+	messageName string
+	fieldName   string
 }
 
 func NewPreprocessor() *preprocessor {
-	return &preprocessor{}
+	p := &preprocessor{}
+	return p
 }
 
 func (p *preprocessor) Name() string {
@@ -28,21 +35,40 @@ func (p *preprocessor) Init(g *generator.Generator) {
 
 func (p *preprocessor) Generate(file *generator.FileDescriptor) {
 	for _, message := range file.Messages() {
-		messageName := generator.CamelCaseSlice(message.TypeName())
+		p.messageName = generator.CamelCaseSlice(message.TypeName())
 		for _, field := range message.Field {
-			//options := getFieldOptions(field)
-			/*v, err := proto.GetExtension(field.Options, preprocess.E_Field)
-			if err != nil {
-				p.Error(err, "In get extenstion")
+			p.fieldName = field.GetName()
+			options := getFieldOptions(field)
+			if options == nil {
+				continue
 			}
-			opts, ok := v.(*preprocess.PreprocessorFieldOptions)
-			if ok != true {
-				p.Error(errors.New("shit!"))
-			}*/
-			test, err := proto.GetExtension(field.Options, prep.E_Field)
-			p.P(fmt.Sprintf("// %v %v %v", messageName, test, err))
+			if options.GetText().GetTrimSpace() {
+				p.TextTrimSpace()
+			}
 		}
 	}
+	generateFromTemplate(p)
+}
+
+func (p *preprocessor) TextTrimSpace() {
+	for p.rules[p.messageName][p.fieldName] == nil {
+		switch {
+		case p.rules == nil:
+			p.rules = make(map[string]map[string][]string)
+		case p.rules[p.messageName] == nil:
+			p.rules[p.messageName] = make(map[string][]string)
+		case p.rules[p.messageName][p.fieldName] == nil:
+			p.rules[p.messageName][p.fieldName] = make([]string, 0)
+		}
+	}
+	fieldRules := p.rules[p.messageName][p.fieldName]
+	p.rules[p.messageName][p.fieldName] = append(fieldRules, "trimSpace")
+}
+
+func (p *preprocessor) GenerateImports(file *generator.FileDescriptor) {}
+
+func init() {
+	generator.RegisterPlugin(NewPreprocessor())
 }
 
 func getFieldOptions(field *descriptor.FieldDescriptorProto) *prep.PreprocessFieldOptions {
@@ -51,7 +77,7 @@ func getFieldOptions(field *descriptor.FieldDescriptorProto) *prep.PreprocessFie
 	}
 	v, err := proto.GetExtension(field.Options, prep.E_Field)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	opts, ok := v.(*prep.PreprocessFieldOptions)
 	if !ok {
@@ -60,8 +86,37 @@ func getFieldOptions(field *descriptor.FieldDescriptorProto) *prep.PreprocessFie
 	return opts
 }
 
-func (p *preprocessor) GenerateImports(file *generator.FileDescriptor) {}
+func generateFromTemplate(p *preprocessor) {
+	const function = `
+func (m *{{.Name}}) Preprocess() {
+	{{ with .Fields}}{{ range .}}
+		*m.{{.}} = strings.TrimSpace(m.{{.}})
+	{{ end }}{{ end }}
+}	
+`
+	var tpl bytes.Buffer
+	t := template.New("rules")
+	t, err := t.Parse(function)
+	if err != nil {
+	}
 
-func init() {
-	generator.RegisterPlugin(NewPreprocessor())
+	for mn, m := range p.rules {
+		fields := make([]string, 0)
+		for fn := range m {
+			fields = append(fields, fn)
+		}
+
+		data := struct {
+			Name   string
+			Fields []string
+		}{
+			Name:   mn,
+			Fields: fields,
+		}
+
+		t.Execute(&tpl, data)
+	}
+
+	p.P(tpl.String())
+	p.P()
 }

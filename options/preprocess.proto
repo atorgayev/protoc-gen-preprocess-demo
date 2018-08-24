@@ -11,10 +11,9 @@ extend google.protobuf.FieldOptions {
 }
 
 message PreprocessFieldOptions {
-    optional PreprocessString string = 1;
-    optional string test = 2;
+    optional PreprocessString text = 1;
 }
 
 message PreprocessString {
-    optional bool trim_spaces = 1;
+    optional bool trim_space = 1;
 }
