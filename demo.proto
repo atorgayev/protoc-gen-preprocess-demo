@@ -3,5 +3,5 @@ syntax = "proto3";
 import "github.com/atorgayev/protoc-gen-preprocess/options/preprocess.proto";
 
 message Demo {
-   string s = 1 [(preprocess.field).string = {trim_spaces: true}];
+   string s = 1 [(preprocess.field).test = "test"];
 }

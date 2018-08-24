@@ -13,6 +13,4 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-func (this *Demo) Preprocess() string {
-	// name:"s" number:1 label:LABEL_OPTIONAL type:TYPE_STRING json_name:"s" options:<11111:"\n\x02\b\x01" >
-}
+// Demo test:"test"  <nil>
