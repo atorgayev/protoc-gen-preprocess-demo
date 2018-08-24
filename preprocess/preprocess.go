@@ -1,4 +1,4 @@
-package preprocessor
+package plugin
 
 import (
 	"fmt"
@@ -39,14 +39,19 @@ func (p *preprocessor) Generate(file *generator.FileDescriptor) {
 		ccTypeName := generator.CamelCaseSlice(message.TypeName())
 		p.P(`func (this *`, ccTypeName, `) Preprocess() string {`)
 		p.In()
-		p.P(`if this == nil {`)
-		p.In()
-		p.P(`return "nil"`)
+		for _, field := range message.Field {
+			p.P(fmt.Sprintf("// %s", field.String()))
+			/*v, err := proto.GetExtension(field.Options, preprocess.E_Field)
+			if err != nil {
+				p.Error(err, "In get extenstion")
+			}
+			opts, ok := v.(*preprocess.PreprocessorFieldOptions)
+			if ok != true {
+				p.Error(errors.New("shit!"))
+			}
+			p.P(fmt.Sprintf("// %v", opts.GetString_().TrimSpaces))*/
+		}
 		p.Out()
-		p.P(`}`)
-		/*for _, field := range message.Field {
-			p.P(fmt.Sprintf(field.String()))
-		}*/
 		p.P(`}`)
 	}
 }
