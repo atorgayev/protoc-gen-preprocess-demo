@@ -13,8 +13,8 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-func (m *Demo) Preprocess() {
+func (m *Demo) Validate() {
 
-	*m.s = strings.TrimSpace(m.s)
+	m.S = strings.TrimSpace(m.S)
 
 }

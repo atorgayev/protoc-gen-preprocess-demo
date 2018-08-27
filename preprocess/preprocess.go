@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"bytes"
+	"strings"
 	"text/template"
 
 	prep "github.com/atorgayev/protoc-gen-preprocess/options"
@@ -42,15 +43,15 @@ func (p *preprocessor) Generate(file *generator.FileDescriptor) {
 			if options == nil {
 				continue
 			}
-			if options.GetText().GetTrimSpace() {
-				p.TextTrimSpace()
+			if options.GetString_().GetTrimSpace() {
+				p.StringTrimSpace()
 			}
 		}
 	}
 	generateFromTemplate(p)
 }
 
-func (p *preprocessor) TextTrimSpace() {
+func (p *preprocessor) StringTrimSpace() {
 	for p.rules[p.messageName][p.fieldName] == nil {
 		switch {
 		case p.rules == nil:
@@ -88,9 +89,9 @@ func getFieldOptions(field *descriptor.FieldDescriptorProto) *prep.PreprocessFie
 
 func generateFromTemplate(p *preprocessor) {
 	const function = `
-func (m *{{.Name}}) Preprocess() {
+func (m *{{.Name}}) Validate() {
 	{{ with .Fields}}{{ range .}}
-		*m.{{.}} = strings.TrimSpace(m.{{.}})
+		m.{{.}} = strings.TrimSpace(m.{{.}})
 	{{ end }}{{ end }}
 }	
 `
@@ -103,7 +104,7 @@ func (m *{{.Name}}) Preprocess() {
 	for mn, m := range p.rules {
 		fields := make([]string, 0)
 		for fn := range m {
-			fields = append(fields, fn)
+			fields = append(fields, strings.Title(fn))
 		}
 
 		data := struct {
