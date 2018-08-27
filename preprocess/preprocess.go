@@ -1,9 +1,6 @@
 package plugin
 
 import (
-	"bytes"
-	"text/template"
-
 	prep "github.com/atorgayev/protoc-gen-preprocess/options"
 	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
@@ -15,10 +12,8 @@ type rule map[string]map[string][]string
 type preprocessor struct {
 	*generator.Generator
 	generator.PluginImports
-	stringsPkg  generator.Single
-	rules       rule
-	messageName string
-	fieldName   string
+	stringsPkg generator.Single
+	rules      rule
 }
 
 func NewPreprocessor() *preprocessor {
@@ -36,36 +31,9 @@ func (p *preprocessor) Init(g *generator.Generator) {
 
 func (p *preprocessor) Generate(file *generator.FileDescriptor) {
 	p.PluginImports = generator.NewPluginImports(p.Generator)
-	p.stringsPkg = p.NewImport("strings")
 	for _, message := range file.Messages() {
-		p.messageName = generator.CamelCaseSlice(message.TypeName())
-		for _, field := range message.Field {
-			p.fieldName = p.GetOneOfFieldName(message, field)
-			options := getFieldOptions(field)
-			if options == nil {
-				continue
-			}
-			if options.GetString_().GetTrimSpace() {
-				p.StringTrimSpace()
-			}
-		}
+		p.generateProto3Message(file, message)
 	}
-	generateFromTemplate(p)
-}
-
-func (p *preprocessor) StringTrimSpace() {
-	for p.rules[p.messageName][p.fieldName] == nil {
-		switch {
-		case p.rules == nil:
-			p.rules = make(map[string]map[string][]string)
-		case p.rules[p.messageName] == nil:
-			p.rules[p.messageName] = make(map[string][]string)
-		case p.rules[p.messageName][p.fieldName] == nil:
-			p.rules[p.messageName][p.fieldName] = make([]string, 0)
-		}
-	}
-	fieldRules := p.rules[p.messageName][p.fieldName]
-	p.rules[p.messageName][p.fieldName] = append(fieldRules, "trimSpace")
 }
 
 func (p *preprocessor) GenerateImports(file *generator.FileDescriptor) {
@@ -91,43 +59,31 @@ func getFieldOptions(field *descriptor.FieldDescriptorProto) *prep.PreprocessFie
 	return opts
 }
 
-func generateFromTemplate(p *preprocessor) {
-	const function = `
-func (m *{{.Name}}) Validate() {
-	{{ with .Fields}}{{ range .}}
-		m.{{.}} = strings.TrimSpace(m.{{.}})
-	{{ end }}{{ end }}
-}	
-`
-	var tpl bytes.Buffer
-	t := template.New("rules")
-	t, err := t.Parse(function)
-	if err != nil {
-	}
-
-	for mn, m := range p.rules {
-		fields := make([]string, 0)
-		for fn := range m {
-			fields = append(fields, fn)
+func (p *preprocessor) generateProto3Message(file *generator.FileDescriptor, message *generator.Descriptor) {
+	ccTypeName := generator.CamelCaseSlice(message.TypeName())
+	p.P(`func (m *`, ccTypeName, `) Preprocess() error {`)
+	p.In()
+	for _, field := range message.Field {
+		fieldOptions := getFieldOptions(field)
+		if fieldOptions == nil && !field.IsMessage() {
+			continue
 		}
-
-		data := struct {
-			Name   string
-			Fields []string
-		}{
-			Name:   mn,
-			Fields: fields,
+		fieldName := p.GetOneOfFieldName(message, field)
+		variableName := "m." + fieldName
+		if field.IsString() {
+			p.generateStringValidator(variableName, ccTypeName, fieldName, fieldOptions)
 		}
-
-		t.Execute(&tpl, data)
 	}
-
-	p.P(tpl.String())
+	p.Out()
+	p.P(`return nil`)
+	p.P(`}`)
 	p.P()
 }
 
-func (p *preprocessor) generateProto3Message(file *generator.FileDescriptor, message *generator.Descriptor) {
-	ccTypeName := generator.CamelCaseSlice(message.TypeName())
-	p.P(`func (m *`, ccTypeName, `) Validate() error {`)
-	p.P(`}`)
+func (p *preprocessor) generateStringValidator(variableName string, ccTypeName string, fieldName string, fv *prep.PreprocessFieldOptions) {
+	if fv.String_ != nil {
+		if fv.String_.GetTrimSpace() {
+			p.P(variableName + ` = strings.TrimSpace(` + variableName + `)`)
+		}
+	}
 }

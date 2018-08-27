@@ -14,8 +14,15 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-func (m *Demo) Validate() {
-
+func (m *Demo) Preprocess() error {
 	m.S = strings.TrimSpace(m.S)
+	return nil
+}
 
+func (m *DemoReq) Preprocess() error {
+	return nil
+}
+
+func (m *DemoRes) Preprocess() error {
+	return nil
 }
