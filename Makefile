@@ -7,4 +7,4 @@ preprocess:
 .PHONY: demo
 demo:
 	go build
-	protoc -I/home/aidyn/go/src -I. -I/usr/local/include --plugin=protoc-gen-preprocess=protoc-gen-preprocess --preprocess_out=./out demo.proto 
+	protoc -I/home/aidyn/go/src -I. -I/usr/local/include --plugin=protoc-gen-preprocess=protoc-gen-preprocess --preprocess_out=./out demo.proto --go_out=./out
