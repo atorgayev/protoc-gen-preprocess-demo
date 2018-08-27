@@ -3,6 +3,7 @@
 
 package demo
 
+import strings "strings"
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
 import math "math"

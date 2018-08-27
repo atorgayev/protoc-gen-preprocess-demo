@@ -2,7 +2,6 @@ package plugin
 
 import (
 	"bytes"
-	"strings"
 	"text/template"
 
 	prep "github.com/atorgayev/protoc-gen-preprocess/options"
@@ -16,6 +15,7 @@ type rule map[string]map[string][]string
 type preprocessor struct {
 	*generator.Generator
 	generator.PluginImports
+	stringsPkg  generator.Single
 	rules       rule
 	messageName string
 	fieldName   string
@@ -35,10 +35,12 @@ func (p *preprocessor) Init(g *generator.Generator) {
 }
 
 func (p *preprocessor) Generate(file *generator.FileDescriptor) {
+	p.PluginImports = generator.NewPluginImports(p.Generator)
+	p.stringsPkg = p.NewImport("strings")
 	for _, message := range file.Messages() {
 		p.messageName = generator.CamelCaseSlice(message.TypeName())
 		for _, field := range message.Field {
-			p.fieldName = field.GetName()
+			p.fieldName = p.GetOneOfFieldName(message, field)
 			options := getFieldOptions(field)
 			if options == nil {
 				continue
@@ -66,7 +68,9 @@ func (p *preprocessor) StringTrimSpace() {
 	p.rules[p.messageName][p.fieldName] = append(fieldRules, "trimSpace")
 }
 
-func (p *preprocessor) GenerateImports(file *generator.FileDescriptor) {}
+func (p *preprocessor) GenerateImports(file *generator.FileDescriptor) {
+	p.PrintImport("strings", "strings")
+}
 
 func init() {
 	generator.RegisterPlugin(NewPreprocessor())
@@ -104,7 +108,7 @@ func (m *{{.Name}}) Validate() {
 	for mn, m := range p.rules {
 		fields := make([]string, 0)
 		for fn := range m {
-			fields = append(fields, strings.Title(fn))
+			fields = append(fields, fn)
 		}
 
 		data := struct {
@@ -120,4 +124,10 @@ func (m *{{.Name}}) Validate() {
 
 	p.P(tpl.String())
 	p.P()
+}
+
+func (p *preprocessor) generateProto3Message(file *generator.FileDescriptor, message *generator.Descriptor) {
+	ccTypeName := generator.CamelCaseSlice(message.TypeName())
+	p.P(`func (m *`, ccTypeName, `) Validate() error {`)
+	p.P(`}`)
 }
