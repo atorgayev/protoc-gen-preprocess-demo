@@ -1,4 +1,7 @@
-default: preprocess demo
+default: install preprocess demo
+
+install:
+	go install
 
 .PHONY: preprocess
 preprocess:
@@ -7,4 +10,4 @@ preprocess:
 .PHONY: demo
 demo:
 	go build
-	protoc -I/home/aidyn/go/src -Iexample -I/usr/local/include --plugin=protoc-gen-preprocess=protoc-gen-preprocess --preprocess_out=./example/proto/ --go_out=plugins=grpc:./example/proto/ demo.proto
+	protoc -I/home/aidyn/go/src -Iexample -I/usr/local/include --preprocess_out=plugins=protoc-gen-preprocess:./example/proto/ --go_out=plugins=grpc:./example/proto/ demo.proto

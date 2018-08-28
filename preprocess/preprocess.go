@@ -7,13 +7,10 @@ import (
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
 )
 
-type rule map[string]map[string][]string
-
 type preprocessor struct {
 	*generator.Generator
 	generator.PluginImports
 	stringsPkg generator.Single
-	rules      rule
 }
 
 func NewPreprocessor() *preprocessor {
@@ -31,13 +28,10 @@ func (p *preprocessor) Init(g *generator.Generator) {
 
 func (p *preprocessor) Generate(file *generator.FileDescriptor) {
 	p.PluginImports = generator.NewPluginImports(p.Generator)
+	p.stringsPkg = p.NewImport("strings")
 	for _, message := range file.Messages() {
 		p.generateProto3Message(file, message)
 	}
-}
-
-func (p *preprocessor) GenerateImports(file *generator.FileDescriptor) {
-	p.PrintImport("strings", "strings")
 }
 
 func init() {
@@ -83,7 +77,7 @@ func (p *preprocessor) generateProto3Message(file *generator.FileDescriptor, mes
 func (p *preprocessor) generateStringValidator(variableName string, ccTypeName string, fieldName string, fv *prep.PreprocessFieldOptions) {
 	if fv.String_ != nil {
 		if fv.String_.GetTrimSpace() {
-			p.P(variableName + ` = strings.TrimSpace(` + variableName + `)`)
+			p.P(variableName, `= `, p.stringsPkg.Use(), `.TrimSpace(`, variableName, `)`)
 		}
 	}
 }
