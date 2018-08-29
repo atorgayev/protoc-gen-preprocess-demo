@@ -10,4 +10,4 @@ preprocess:
 .PHONY: demo
 demo:
 	go build
-	protoc -I/home/aidyn/go/src -Iexample -I/usr/local/include --preprocess_out=plugins=protoc-gen-preprocess:./example/proto/ --go_out=plugins=grpc:./example/proto/ demo.proto
+	protoc -I/home/aidyn/go/src -Iexample -I/usr/local/include --preprocess_out=./example/proto/ --go_out=plugins=grpc:./example/proto/ demo.proto
